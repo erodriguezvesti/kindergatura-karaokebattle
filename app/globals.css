@@ -1,26 +1,416 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 
+/* ============ DESIGN SYSTEM — Karaoke Battle ============ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base neutrals — deep cool-violet near-black */
+  --bg:        oklch(0.15 0.018 295);
+  --bg-2:      oklch(0.18 0.022 295);
+  --surface:   oklch(0.215 0.024 293);
+  --surface-2: oklch(0.255 0.026 292);
+  --line:      oklch(0.34 0.028 292);
+  --line-soft: oklch(0.30 0.024 292 / 0.6);
+  --text:      oklch(0.97 0.006 290);
+  --text-dim:  oklch(0.72 0.018 290);
+  --text-faint:oklch(0.56 0.020 290);
+
+  /* Neon accents */
+  --magenta: oklch(0.72 0.205 350);
+  --cyan:    oklch(0.78 0.135 205);
+  --lime:    oklch(0.85 0.205 130);
+  --amber:   oklch(0.82 0.165 70);
+  --violet:  oklch(0.72 0.175 295);
+  --rose:    oklch(0.74 0.175 18);
+  --spotify: oklch(0.74 0.17 152);
+
+  --accent:   var(--magenta);
+  --accent-2: var(--cyan);
+
+  --radius:    18px;
+  --radius-sm: 12px;
+  --radius-lg: 26px;
+
+  --font-body: var(--font-display);
+
+  --shadow: 0 10px 40px -12px rgba(0,0,0,0.7);
+  --app-w: 430px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-display), system-ui, sans-serif;
+  background:
+    radial-gradient(120% 80% at 15% 0%, oklch(0.24 0.05 350 / 0.35), transparent 60%),
+    radial-gradient(120% 90% at 95% 10%, oklch(0.24 0.05 205 / 0.30), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Team / accent helpers */
+.tc-magenta { --tc: var(--magenta); }
+.tc-cyan    { --tc: var(--cyan); }
+.tc-lime    { --tc: var(--lime); }
+.tc-amber   { --tc: var(--amber); }
+.tc-violet  { --tc: var(--violet); }
+.tc-rose    { --tc: var(--rose); }
+
+/* ============ App shell (full viewport) ============ */
+.stage {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* scrollable screen body */
+.screen {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-top: env(safe-area-inset-top);
+}
+.screen::-webkit-scrollbar { width: 0; }
+.screen-pad { padding: 16px 20px 120px; max-width: 540px; margin: 0 auto; }
+
+/* ============ Typography ============ */
+.eyebrow {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+h1.title {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700; font-size: 30px; line-height: 1.05; letter-spacing: -0.02em;
+}
+h2.title {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 600; font-size: 21px; letter-spacing: -0.01em;
+}
+.subtitle { color: var(--text-dim); font-size: 14px; line-height: 1.5; }
+
+/* ============ Buttons ============ */
+.btn {
+  appearance: none; cursor: pointer;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 600; font-size: 15px; border-radius: var(--radius-sm);
+  padding: 14px 18px; display: inline-flex; align-items: center; justify-content: center;
+  gap: 9px; transition: transform .12s ease, filter .15s ease, background .15s ease;
+  color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--line); white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn.block { width: 100%; }
+.btn-primary {
+  background: var(--accent); color: oklch(0.16 0.02 295); border: none;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent), white 20%),
+              0 8px 30px -8px var(--accent);
+}
+.btn-primary:hover { filter: brightness(1.06); }
+.btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+.btn-ghost:hover { background: var(--surface); }
+.btn-sm { padding: 9px 13px; font-size: 13px; border-radius: 10px; }
+.btn-icon { padding: 0; width: 42px; height: 42px; flex: 0 0 42px; border-radius: 12px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ============ Cards & surfaces ============ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.card.glass {
+  background: oklch(0.22 0.024 293 / 0.7);
+  backdrop-filter: blur(12px);
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 0.04em;
+  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--text-dim); background: var(--bg-2);
+  cursor: pointer;
+}
+.chip.on {
+  color: oklch(0.16 0.02 295); background: var(--tc, var(--accent));
+  border-color: transparent; font-weight: 700;
+}
+
+.dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--tc, var(--accent)); flex: 0 0 9px;
+  box-shadow: 0 0 8px var(--tc, var(--accent));
+  display: inline-block;
+}
+
+/* ============ Inputs ============ */
+.input {
+  width: 100%; background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 13px 14px; color: var(--text);
+  font-family: var(--font-display), system-ui, sans-serif; font-size: 15px; outline: none;
+  transition: border-color .15s ease;
+}
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--text-faint); }
+
+/* ============ Bottom nav ============ */
+.tabbar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 78px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  display: flex; align-items: stretch; gap: 2px;
+  background: oklch(0.16 0.018 295 / 0.86);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid var(--line-soft);
+  z-index: 20;
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; border: none; background: none; cursor: pointer; color: var(--text-faint);
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
+  border-radius: 14px; transition: color .15s ease;
+}
+.tab .ico { font-size: 19px; line-height: 1; }
+.tab.active { color: var(--accent); }
+
+/* ============ BottomSheet (HeroUI Modal — placement="center") ============ */
+/* El scroll lo da Modal.Body (overflow-y:auto via .modal__body--scroll-inside).
+   Acá solo overrideamos chrome (colors, radius, padding). */
+.kb-sheet {
+  background: var(--bg-2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 24px !important;
+  max-height: 88vh !important;
+  padding: 0 !important;
+}
+
+/* Variante fullscreen (Modal size="full") — para el tablero. */
+.kb-sheet-full {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  padding: 0 !important;
+}
+
+/* Body: hereda color (Modal.Body trae text-muted por default), maneja el
+   padding real (incluido safe-area) y scrollea solo. */
+.kb-sheet__body {
+  color: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+  padding: 24px 22px !important;
+  overscroll-behavior: contain;
+}
+.kb-sheet-full .kb-sheet__body {
+  padding:
+    calc(env(safe-area-inset-top) + 18px)
+    20px
+    calc(env(safe-area-inset-bottom) + 20px) !important;
+}
+
+/* ============ Sheets / modal ============ */
+.overlay-layer { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
+.overlay-layer > * { pointer-events: auto; }
+.sheet-scrim {
+  position: absolute; inset: 0; background: oklch(0.06 0.01 290 / 0.66);
+  z-index: 40; display: flex; align-items: flex-end;
+}
+.sheet {
+  width: 100%; background: var(--bg-2);
+  border-top-left-radius: 28px; border-top-right-radius: 28px;
+  border-top: 1px solid var(--line);
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
+  max-height: 88%; overflow-y: auto;
+}
+.sheet .grip {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--line); margin: 8px auto 14px;
+}
+@keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop { 0% { transform: scale(.85); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes eq { from { height: 22%; } to { height: 100%; } }
+
+/* ============ Splash de entrada (logo Kindergatura) ============ */
+.kb-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  padding: 24px;
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      oklch(0.22 0.05 295) 0%,
+      var(--bg) 70%
+    );
+  animation: kb-splash-bg 0.6s ease-out;
+}
+.kb-splash--out {
+  animation: kb-splash-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+.kb-splash__logo {
+  width: min(60vw, 380px);
+  height: auto;
+  filter: drop-shadow(0 10px 30px oklch(0.18 0.06 295 / 0.5));
+  animation: kb-splash-logo 1.5s cubic-bezier(0.2, 1.1, 0.3, 1.05);
+}
+.kb-splash--out .kb-splash__logo {
+  animation: kb-splash-logo-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Botón "Comenzar" — invisible hasta que la animación del logo termina. */
+.kb-splash__cta {
+  appearance: none;
+  border: 1px solid color-mix(in oklch, var(--accent) 60%, transparent);
+  background: var(--accent);
+  color: oklch(0.16 0.02 295);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  padding: 14px 38px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 0 color-mix(in oklch, var(--accent) 40%, transparent),
+    0 8px 24px -8px color-mix(in oklch, var(--accent) 60%, transparent);
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.4s ease-out,
+    transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.25s ease-out;
+}
+.kb-splash__cta--in {
+  opacity: 1;
+  transform: translateY(0);
+  animation: kb-splash-cta-pulse 2.4s ease-in-out 0.4s infinite;
+}
+.kb-splash__cta:hover {
+  box-shadow:
+    0 0 0 6px color-mix(in oklch, var(--accent) 18%, transparent),
+    0 10px 28px -8px color-mix(in oklch, var(--accent) 70%, transparent);
+}
+.kb-splash__cta:active {
+  transform: translateY(1px);
+}
+.kb-splash__cta:disabled {
+  cursor: default;
+}
+
+@keyframes kb-splash-bg {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes kb-splash-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes kb-splash-logo {
+  0%   { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+  60%  { opacity: 1; transform: scale(1.06) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes kb-splash-logo-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.1); }
+}
+@keyframes kb-splash-cta-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 color-mix(in oklch, var(--accent) 0%, transparent),
+      0 8px 24px -8px color-mix(in oklch, var(--accent) 60%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px color-mix(in oklch, var(--accent) 0%, transparent),
+      0 8px 24px -8px color-mix(in oklch, var(--accent) 60%, transparent);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Mientras el splash está arriba, el stage permanece invisible.
+   Cuando se quita la clase --waiting, el transition del .stage lo entra. */
+.kb-stage--waiting {
+  opacity: 0;
+  transform: scale(0.98);
+  pointer-events: none;
+}
+
+/* ============ Board grid ============ */
+.board { display: grid; gap: 7px; width: 100%; }
+.cell {
+  aspect-ratio: 1 / 1; border-radius: 11px; border: 1px solid var(--line);
+  background: var(--surface); display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 6px; font-size: 10px; line-height: 1.18; font-weight: 500;
+  color: var(--text-dim); cursor: pointer; position: relative; overflow: hidden;
+  transition: transform .1s ease, border-color .15s ease;
+}
+.cell:active { transform: scale(0.95); }
+.cell.marked {
+  background: var(--tc, var(--lime)); color: oklch(0.16 0.02 295);
+  border-color: transparent; font-weight: 700;
+}
+.cell.free { background: var(--surface-2); border-style: dashed; }
+
+.util { color: var(--text-dim); }
+.mono { font-family: var(--font-mono), ui-monospace, monospace; }
+.glow-text { text-shadow: 0 0 18px color-mix(in oklch, var(--accent), transparent 45%); }
+
+/* segmented */
+.seg {
+  display: flex; background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 3px; gap: 3px;
+}
+.seg button {
+  flex: 1; border: none; background: none; color: var(--text-dim); cursor: pointer;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 600; font-size: 13px; padding: 9px 6px; border-radius: 9px;
+  transition: all .15s ease;
+}
+.seg button.on { background: var(--accent); color: oklch(0.16 0.02 295); }
+
+.row { display: flex; align-items: center; gap: 12px; }
+.between { justify-content: space-between; }
+.stack { display: flex; flex-direction: column; }
+
+/* toggle */
+.switch {
+  width: 46px; height: 28px; border-radius: 999px; background: var(--line);
+  position: relative; cursor: pointer; transition: background .2s ease; flex: 0 0 46px;
+}
+.switch.on { background: var(--accent); }
+.switch .knob {
+  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+  border-radius: 50%; background: white; transition: transform .2s ease;
+}
+.switch.on .knob { transform: translateX(18px); }
+
+.divider { height: 1px; background: var(--line-soft); margin: 16px 0; border: none; }
+
+/* ============ PRINT ============ */
+#print-root { display: none; }
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  html, body { background: #fff !important; overflow: visible !important; height: auto !important; }
+  .stage, .tabbar { display: none !important; }
+  #print-root { display: block !important; position: static !important; }
 }
