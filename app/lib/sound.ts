@@ -183,3 +183,148 @@ export function setMuted(next: boolean): void {
 export function setMasterVolume(v: number): void {
   masterVolume = Math.max(0, Math.min(1, v));
 }
+
+/* ---------- Música de fondo del splash ----------
+ * Loop chiptune (I-V-vi-IV en C mayor) con bajo + melodía + arpegio.
+ * Web Audio puro: agendamos N loops por adelantado y los enrutamos a un
+ * único GainNode master para poder fadear/cortar al cerrar el splash.
+ */
+let musicMaster: GainNode | null = null;
+let musicOscs: OscillatorNode[] = [];
+
+function scheduleNote(
+  ctx: AudioContext,
+  master: GainNode,
+  opts: {
+    freq: number;
+    startAt: number;
+    duration: number;
+    type: OscillatorType;
+    gain: number;
+  },
+) {
+  const { freq, startAt, duration, type, gain } = opts;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startAt);
+  g.gain.setValueAtTime(0, startAt);
+  g.gain.linearRampToValueAtTime(gain, startAt + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0008, startAt + duration);
+  osc.connect(g).connect(master);
+  osc.start(startAt);
+  osc.stop(startAt + duration + 0.05);
+  musicOscs.push(osc);
+}
+
+export function startSplashMusic(): void {
+  const ctx = getCtx();
+  if (!ctx || muted || musicMaster) return;
+  // Si el contexto no logró arrancar (autoplay bloqueado), retry vendrá del
+  // próximo gesto via attachSplashMusicUnlock().
+  if (ctx.state !== "running") return;
+
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  master.gain.linearRampToValueAtTime(0.22 * masterVolume, ctx.currentTime + 0.6);
+  master.connect(ctx.destination);
+  musicMaster = master;
+
+  const bpm = 138;
+  const beat = 60 / bpm;
+  const bar = beat * 4;
+  const t0 = ctx.currentTime + 0.08;
+
+  // Progresión I-V-vi-IV en C mayor.
+  // Cada acorde: bajo (pulso por beat) + melodía de 8 corcheas.
+  const progression: {
+    bass: number;
+    melody: number[];
+  }[] = [
+    // C major: bass C3, melody C5-E5-G5-E5-G5-E5-C5-G4
+    { bass: 130.81, melody: [523.25, 659.25, 783.99, 659.25, 783.99, 659.25, 523.25, 392.0] },
+    // G major: bass G2, melody D5-G5-B5-G5-B5-G5-D5-B4
+    { bass: 98.0, melody: [587.33, 783.99, 987.77, 783.99, 987.77, 783.99, 587.33, 493.88] },
+    // A minor: bass A2, melody A4-C5-E5-C5-E5-C5-A4-G4
+    { bass: 110.0, melody: [440.0, 523.25, 659.25, 523.25, 659.25, 523.25, 440.0, 392.0] },
+    // F major: bass F2, melody F4-A4-C5-A4-C5-A4-F4-C5
+    { bass: 87.31, melody: [349.23, 440.0, 523.25, 440.0, 523.25, 440.0, 349.23, 523.25] },
+  ];
+
+  // Loops: ~7s cada uno → 6 loops ≈ 42s, suficiente margen.
+  const LOOPS = 6;
+  for (let loop = 0; loop < LOOPS; loop++) {
+    for (let i = 0; i < progression.length; i++) {
+      const barT = t0 + (loop * progression.length + i) * bar;
+      const { bass, melody } = progression[i];
+      // Bajo: 4 negras
+      for (let b = 0; b < 4; b++) {
+        scheduleNote(ctx, master, {
+          freq: bass,
+          startAt: barT + b * beat,
+          duration: beat * 0.65,
+          type: "triangle",
+          gain: 0.32,
+        });
+      }
+      // Melodía: 8 corcheas
+      for (let m = 0; m < melody.length; m++) {
+        scheduleNote(ctx, master, {
+          freq: melody[m],
+          startAt: barT + m * (beat / 2),
+          duration: beat * 0.42,
+          type: "square",
+          gain: 0.16,
+        });
+      }
+    }
+  }
+}
+
+export function stopSplashMusic(): void {
+  if (!musicMaster || !audioCtx) return;
+  const ctx = audioCtx;
+  const master = musicMaster;
+  const oscs = musicOscs;
+  musicMaster = null;
+  musicOscs = [];
+  const t = ctx.currentTime;
+  master.gain.cancelScheduledValues(t);
+  master.gain.setValueAtTime(Math.max(0.0008, master.gain.value), t);
+  master.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+  setTimeout(() => {
+    oscs.forEach((o) => {
+      try {
+        o.stop();
+      } catch {
+        // ignore
+      }
+    });
+    master.disconnect();
+  }, 400);
+}
+
+/* Para vencer el autoplay policy: registra un listener one-shot global que
+ * arranca la música apenas haya un gesto del usuario. Devuelve un cleanup. */
+export function attachSplashMusicUnlock(): () => void {
+  if (typeof window === "undefined") return () => {};
+  const events: (keyof WindowEventMap)[] = [
+    "pointerdown",
+    "touchstart",
+    "keydown",
+  ];
+  const handler = () => {
+    startSplashMusic();
+    events.forEach((ev) =>
+      window.removeEventListener(ev, handler, { capture: true } as EventListenerOptions),
+    );
+  };
+  events.forEach((ev) =>
+    window.addEventListener(ev, handler, { capture: true, passive: true }),
+  );
+  return () => {
+    events.forEach((ev) =>
+      window.removeEventListener(ev, handler, { capture: true } as EventListenerOptions),
+    );
+  };
+}

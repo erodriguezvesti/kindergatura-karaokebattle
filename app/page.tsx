@@ -18,6 +18,7 @@ import {
   shuffle,
 } from "./lib/game";
 import { clearSnapshot, loadSnapshot, saveSnapshot } from "./lib/persist";
+import { sfx, startSplashMusic, stopSplashMusic } from "./lib/sound";
 import type {
   Category,
   Celebration,
@@ -48,19 +49,31 @@ const TABS: { id: Screen; label: string; ico: string }[] = [
 ];
 
 export default function Home() {
-  // Splash de entrada: muestra el logo y un botón "Comenzar". El usuario
-  // dispara la salida; el botón aparece después de la animación de entrada
-  // del logo (~1.7s) para que primero se vea la marca.
+  // Splash de entrada. Flujo:
+  //   1) Logo aparece + botón "Comenzar" tras la animación inicial.
+  //   2) Click "Comenzar" → arranca música chiptune (el click es el gesto
+  //      que el browser exige para audio) + logo celebra ~1.6s.
+  //   3) Termina la celebración → fade-out del splash, app fade-in.
   const [splashHiding, setSplashHiding] = useState(false);
   const [splashGone, setSplashGone] = useState(false);
   const [splashButtonReady, setSplashButtonReady] = useState(false);
+  const [splashCelebrating, setSplashCelebrating] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setSplashButtonReady(true), 1700);
     return () => clearTimeout(t);
   }, []);
   const dismissSplash = useCallback(() => {
-    setSplashHiding(true);
-    setTimeout(() => setSplashGone(true), 500);
+    // El click es el gesto que desbloquea AudioContext en el browser.
+    startSplashMusic();
+    sfx.start();
+    setSplashCelebrating(true);
+    // Después de la celebración (logo bouncing con música), fade-out del
+    // splash. La música se corta justo antes del unmount.
+    setTimeout(() => {
+      stopSplashMusic();
+      setSplashHiding(true);
+      setTimeout(() => setSplashGone(true), 500);
+    }, 1600);
   }, []);
 
   const [screen, setScreen] = useState<Screen>("setup");
@@ -288,18 +301,24 @@ export default function Home() {
           width={420}
           height={420}
           priority
-          className="kb-splash__logo"
-        />
-        <button
-          type="button"
           className={
-            "kb-splash__cta" + (splashButtonReady ? " kb-splash__cta--in" : "")
+            "kb-splash__logo" +
+            (splashCelebrating ? " kb-splash__logo--party" : "")
           }
-          onClick={dismissSplash}
-          disabled={!splashButtonReady}
-        >
-          Comenzar
-        </button>
+        />
+        {!splashCelebrating && (
+          <button
+            type="button"
+            className={
+              "kb-splash__cta" +
+              (splashButtonReady ? " kb-splash__cta--in" : "")
+            }
+            onClick={dismissSplash}
+            disabled={!splashButtonReady}
+          >
+            Comenzar
+          </button>
+        )}
       </div>
     )}
     <div className={"stage" + (splashGone ? "" : " kb-stage--waiting")}>
@@ -403,7 +422,10 @@ export default function Home() {
                 key={tab.id}
                 type="button"
                 className={"tab" + (screen === target ? " active" : "")}
-                onClick={() => setScreen(target)}
+                onClick={() => {
+                  if (screen !== target) sfx.tap();
+                  setScreen(target);
+                }}
               >
                 <span className="ico">{tab.ico}</span>
                 {tab.label}

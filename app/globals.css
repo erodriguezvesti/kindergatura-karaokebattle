@@ -276,6 +276,13 @@ h2.title {
 .kb-splash--out .kb-splash__logo {
   animation: kb-splash-logo-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
+/* Mientras suena la música y se va a abrir la app: rebote rítmico. */
+.kb-splash__logo--party {
+  animation: kb-splash-logo-party 0.4s ease-in-out infinite alternate;
+  filter:
+    drop-shadow(0 10px 30px oklch(0.18 0.06 295 / 0.5))
+    drop-shadow(0 0 30px var(--accent));
+}
 
 /* Botón "Comenzar" — invisible hasta que la animación del logo termina. */
 .kb-splash__cta {
@@ -333,6 +340,10 @@ h2.title {
 @keyframes kb-splash-logo-out {
   from { opacity: 1; transform: scale(1); }
   to   { opacity: 0; transform: scale(1.1); }
+}
+@keyframes kb-splash-logo-party {
+  0%   { transform: scale(1) rotate(-2deg); }
+  100% { transform: scale(1.08) rotate(2deg); }
 }
 @keyframes kb-splash-cta-pulse {
   0%, 100% {

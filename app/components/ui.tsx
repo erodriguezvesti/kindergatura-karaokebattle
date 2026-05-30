@@ -352,18 +352,21 @@ export function KBCard({
   onClick,
   ...rest
 }: ComponentProps<typeof HCard> & { glass?: boolean }) {
+  // HCard tiene `as` polimórfico → su onClick es union de MouseEvent sobre
+  // muchos elementos. Para no pelearnos con la inferencia, casteamos el
+  // wrapper al mismo tipo que el handler original recibe.
+  type ClickHandler = ComponentProps<typeof HCard>["onClick"];
+  const handleClick = onClick
+    ? (((e: Parameters<NonNullable<ClickHandler>>[0]) => {
+        sfx.tap();
+        (onClick as (event: typeof e) => void)(e);
+      }) as ClickHandler)
+    : undefined;
   return (
     <HCard
       className={"card " + (glass ? "glass " : "") + (className || "")}
       style={style}
-      onClick={
-        onClick
-          ? (e) => {
-              sfx.tap();
-              onClick(e);
-            }
-          : onClick
-      }
+      onClick={handleClick}
       {...rest}
     >
       {children}
@@ -387,7 +390,14 @@ export function KBChip({
     <HChip
       className={"chip " + (on ? "on " : "") + (className || "")}
       style={style}
-      onClick={onClick}
+      onClick={
+        onClick
+          ? () => {
+              sfx.tap();
+              onClick();
+            }
+          : undefined
+      }
       {...rest}
     >
       {typeof children === "string" ? (
